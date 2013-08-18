@@ -42,6 +42,23 @@ toHandler = function(h) {
   }
 };
 
+makeURIPartRe = function(pattern) {
+  if (pattern[0] !== '/') {
+    pattern = "/" + pattern;
+  }
+  return RegExp("^" + pattern + "(/|$)");
+};
+
+overlay = function(obj, attrs) {
+  var k, newObj, v;
+  newObj = Object.create(obj);
+  for (k in attrs) {
+    v = attrs[k];
+    newObj[k] = v;
+  }
+  return newObj;
+};
+
 Stack = (function() {
   function Stack(handlers) {
     if (handlers == null) {
@@ -127,23 +144,6 @@ Stack = (function() {
   return Stack;
 
 })();
-
-makeURIPartRe = function(pattern) {
-  if (pattern[0] !== '/') {
-    pattern = "/" + pattern;
-  }
-  return RegExp("^" + pattern + "(/|$)");
-};
-
-overlay = function(obj, attrs) {
-  var k, newObj, v;
-  newObj = Object.create(obj);
-  for (k in attrs) {
-    v = attrs[k];
-    newObj[k] = v;
-  }
-  return newObj;
-};
 
 Router = (function(_super) {
   __extends(Router, _super);

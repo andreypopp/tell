@@ -24,6 +24,16 @@ asPromise = (func, args...) ->
 toHandler = (h) ->
   if h.toHandler? then h.toHandler() else h
 
+makeURIPartRe = (pattern) ->
+  pattern = "/#{pattern}" unless pattern[0] == '/'
+  ///^#{pattern}(/|$)///
+
+overlay = (obj, attrs) ->
+  newObj = Object.create(obj)
+  for k, v of attrs
+    newObj[k] = v
+  newObj
+
 class Stack
 
   constructor: (handlers = []) ->
@@ -79,18 +89,6 @@ class Stack
             if nextIsCalled then throw err else callNext(err)
 
     process(err)
-
-makeURIPartRe = (pattern) ->
-  pattern = "/#{pattern}" unless pattern[0] == '/'
-  ///^#{pattern}(/|$)///
-
-
-
-overlay = (obj, attrs) ->
-  newObj = Object.create(obj)
-  for k, v of attrs
-    newObj[k] = v
-  newObj
 
 class Router extends Stack
 
