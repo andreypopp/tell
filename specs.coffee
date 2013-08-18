@@ -115,6 +115,17 @@ describe 'Stack', ->
           throw err
         .end()
 
+  it 'propagates passed error to top level', ->
+    app = tell.stack()
+      .use (req, res, next) ->
+        next new Error('error')
+    throws Error, ->
+      app.handle(null)
+        .fail (err) ->
+          ok err
+          throw err
+        .end()
+
   it 'catches thrown error with a handler', (done) ->
     trace = []
     app = tell.stack()
@@ -137,11 +148,33 @@ describe 'Stack', ->
       .then(done)
       .end()
 
-  it 'catches rejected error with a handler', (done) ->
+  it 'catches rejected promise with a handler', (done) ->
     trace = []
     app = tell.stack()
       .use (req, res, next) ->
         reject new Error('error')
+      .catch (err, req, res, next) ->
+        eq req, 1
+        eq res, 2
+        ok err
+        trace.push 1
+      .use (req, res, next) ->
+        eq req, 1
+        eq res, 2
+        trace.push 2
+        'ok'
+    app.handle(null, 1, 2)
+      .then (res) ->
+        eq res, 'ok'
+        eq trace.length, 2
+      .then(done)
+      .end()
+
+  it 'catches passed error with a handler', (done) ->
+    trace = []
+    app = tell.stack()
+      .use (req, res, next) ->
+        next new Error('error')
       .catch (err, req, res, next) ->
         eq req, 1
         eq res, 2
@@ -176,7 +209,7 @@ describe 'Stack', ->
           throw err
         .end()
 
-  it 'propagates re-rejected error', ->
+  it 'propagates re-rejected promise', ->
     trace = []
     app = tell.stack()
       .use (req, res, next) ->
@@ -184,7 +217,24 @@ describe 'Stack', ->
       .catch (err, req, res, next) ->
         ok err
         trace.push 1
-        reject(err)
+        reject err
+    throws Error, ->
+      app.handle(null)
+        .fail (err) ->
+          ok err
+          eq trace.length, 1
+          throw err
+        .end()
+
+  it 'propagates re-passed error', ->
+    trace = []
+    app = tell.stack()
+      .use (req, res, next) ->
+        next new Error('error')
+      .catch (err, req, res, next) ->
+        ok err
+        trace.push 1
+        next err
     throws Error, ->
       app.handle(null)
         .fail (err) ->

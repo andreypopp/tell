@@ -116,6 +116,18 @@ describe('Stack', function() {
       }).end();
     });
   });
+  it('propagates passed error to top level', function() {
+    var app;
+    app = tell.stack().use(function(req, res, next) {
+      return next(new Error('error'));
+    });
+    return throws(Error, function() {
+      return app.handle(null).fail(function(err) {
+        ok(err);
+        throw err;
+      }).end();
+    });
+  });
   it('catches thrown error with a handler', function(done) {
     var app, trace;
     trace = [];
@@ -137,11 +149,32 @@ describe('Stack', function() {
       return eq(trace.length, 2);
     }).then(done).end();
   });
-  it('catches rejected error with a handler', function(done) {
+  it('catches rejected promise with a handler', function(done) {
     var app, trace;
     trace = [];
     app = tell.stack().use(function(req, res, next) {
       return reject(new Error('error'));
+    })["catch"](function(err, req, res, next) {
+      eq(req, 1);
+      eq(res, 2);
+      ok(err);
+      return trace.push(1);
+    }).use(function(req, res, next) {
+      eq(req, 1);
+      eq(res, 2);
+      trace.push(2);
+      return 'ok';
+    });
+    return app.handle(null, 1, 2).then(function(res) {
+      eq(res, 'ok');
+      return eq(trace.length, 2);
+    }).then(done).end();
+  });
+  it('catches passed error with a handler', function(done) {
+    var app, trace;
+    trace = [];
+    app = tell.stack().use(function(req, res, next) {
+      return next(new Error('error'));
     })["catch"](function(err, req, res, next) {
       eq(req, 1);
       eq(res, 2);
@@ -176,7 +209,7 @@ describe('Stack', function() {
       }).end();
     });
   });
-  return it('propagates re-rejected error', function() {
+  it('propagates re-rejected promise', function() {
     var app, trace;
     trace = [];
     app = tell.stack().use(function(req, res, next) {
@@ -185,6 +218,24 @@ describe('Stack', function() {
       ok(err);
       trace.push(1);
       return reject(err);
+    });
+    return throws(Error, function() {
+      return app.handle(null).fail(function(err) {
+        ok(err);
+        eq(trace.length, 1);
+        throw err;
+      }).end();
+    });
+  });
+  return it('propagates re-passed error', function() {
+    var app, trace;
+    trace = [];
+    app = tell.stack().use(function(req, res, next) {
+      return next(new Error('error'));
+    })["catch"](function(err, req, res, next) {
+      ok(err);
+      trace.push(1);
+      return next(err);
     });
     return throws(Error, function() {
       return app.handle(null).fail(function(err) {
