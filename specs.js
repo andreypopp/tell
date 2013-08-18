@@ -246,3 +246,82 @@ describe('Stack', function() {
     });
   });
 });
+
+describe('Router', function() {
+  return describe('mounting a handler under a pattern', function() {
+    it('responds to exact match', function(done) {
+      var app, trace;
+      trace = [];
+      app = tell.router().use('/a', function(req, res) {
+        eq(req.url, '/');
+        return trace.push(1);
+      }).use('/b', function(req, res) {
+        return trace.push(2);
+      }).use(function(req, res) {
+        eq(req.url, '/a');
+        return trace.push(3);
+      });
+      return app.handle(null, {
+        url: '/a'
+      }).then(function(res) {
+        eq(trace.length, 2);
+        eq(trace[0], 1);
+        return eq(trace[1], 3);
+      }).then(done).end();
+    });
+    it('responds to match of a leading part', function(done) {
+      var app, trace;
+      trace = [];
+      app = tell.router().use('/a', function(req, res) {
+        eq(req.url, '/b');
+        return trace.push(1);
+      }).use('/b', function(req, res) {
+        return trace.push(2);
+      }).use(function(req, res) {
+        eq(req.url, '/a/b');
+        return trace.push(3);
+      });
+      return app.handle(null, {
+        url: '/a/b'
+      }).then(function(res) {
+        eq(trace.length, 2);
+        eq(trace[0], 1);
+        return eq(trace[1], 3);
+      }).then(done).end();
+    });
+    it('does not respond to arbitrary match of a leading part', function(done) {
+      var app, trace;
+      trace = [];
+      app = tell.router().use('/a', function(req, res) {
+        return trace.push(1);
+      }).use('/b', function(req, res) {
+        return trace.push(2);
+      }).use(function(req, res) {
+        return trace.push(3);
+      });
+      return app.handle(null, {
+        url: '/ab'
+      }).then(function(res) {
+        eq(trace.length, 1);
+        return eq(trace[0], 3);
+      }).then(done).end();
+    });
+    return it('does not respond to a no match case', function(done) {
+      var app, trace;
+      trace = [];
+      app = tell.router().use('/a', function(req, res) {
+        return trace.push(1);
+      }).use('/b', function(req, res) {
+        return trace.push(2);
+      }).use(function(req, res) {
+        return trace.push(3);
+      });
+      return app.handle(null, {
+        url: '/c'
+      }).then(function(res) {
+        eq(trace.length, 1);
+        return eq(trace[0], 3);
+      }).then(done).end();
+    });
+  });
+});

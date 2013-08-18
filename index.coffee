@@ -80,7 +80,39 @@ class Stack
 
     process(err)
 
-stack = ->
-  new Stack
+makeURIPartRe = (pattern) ->
+  pattern = "/#{pattern}" unless pattern[0] == '/'
+  ///^#{pattern}(/|$)///
 
-module.exports = {createServer, Stack, stack}
+
+
+overlay = (obj, attrs) ->
+  newObj = Object.create(obj)
+  for k, v of attrs
+    newObj[k] = v
+  newObj
+
+class Router extends Stack
+
+  use: (pattern, handler) ->
+    if handler
+      pattern = makeURIPartRe pattern unless pattern instanceof RegExp
+      wrapperHandler = (req, res, next) ->
+        m = pattern.exec req.url
+        if m
+          newUrl = req.url.substring(m[0].length)
+          newUrl = "/#{newUrl}" unless newUrl[0] == '/'
+          req = overlay req, url: newUrl
+          handler(req, res, next)
+        else
+          next()
+      super wrapperHandler
+    else
+      handler = pattern
+      super handler
+
+stack = -> new Stack
+router = -> new Router
+
+
+module.exports = {createServer, Stack, stack, Router, router}

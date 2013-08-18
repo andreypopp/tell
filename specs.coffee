@@ -242,3 +242,81 @@ describe 'Stack', ->
           eq trace.length, 1
           throw err
         .end()
+
+describe 'Router', ->
+
+  describe 'mounting a handler under a pattern', ->
+
+    it 'responds to exact match', (done) ->
+      trace = []
+      app = tell.router()
+        .use '/a', (req, res) ->
+          eq req.url, '/'
+          trace.push 1
+        .use '/b', (req, res) ->
+          trace.push 2
+        .use (req, res) ->
+          eq req.url, '/a'
+          trace.push 3
+
+      app.handle(null, {url: '/a'})
+        .then (res) ->
+          eq trace.length, 2
+          eq trace[0], 1
+          eq trace[1], 3
+        .then(done)
+        .end()
+
+    it 'responds to match of a leading part', (done) ->
+      trace = []
+      app = tell.router()
+        .use '/a', (req, res) ->
+          eq req.url, '/b'
+          trace.push 1
+        .use '/b', (req, res) ->
+          trace.push 2
+        .use (req, res) ->
+          eq req.url, '/a/b'
+          trace.push 3
+
+      app.handle(null, {url: '/a/b'})
+        .then (res) ->
+          eq trace.length, 2
+          eq trace[0], 1
+          eq trace[1], 3
+        .then(done)
+        .end()
+
+    it 'does not respond to arbitrary match of a leading part', (done) ->
+      trace = []
+      app = tell.router()
+        .use '/a', (req, res) ->
+          trace.push 1
+        .use '/b', (req, res) ->
+          trace.push 2
+        .use (req, res) ->
+          trace.push 3
+
+      app.handle(null, {url: '/ab'})
+        .then (res) ->
+          eq trace.length, 1
+          eq trace[0], 3
+        .then(done)
+        .end()
+
+    it 'does not respond to a no match case', (done) ->
+      trace = []
+      app = tell.router()
+        .use '/a', (req, res) ->
+          trace.push 1
+        .use '/b', (req, res) ->
+          trace.push 2
+        .use (req, res) ->
+          trace.push 3
+
+      app.handle(null, {url: '/c'})
+        .then (res) ->
+          eq trace.length, 1
+          eq trace[0], 3
+        .then(done)
+        .end()

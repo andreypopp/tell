@@ -6,8 +6,10 @@
   2013 (c) Andrey Popp <8mayday@gmail.com>
 */
 
-var Stack, asPromise, createServer, http, reject, resolve, stack, toHandler, _ref,
-  __slice = [].slice;
+var Router, Stack, asPromise, createServer, http, makeURIPartRe, overlay, reject, resolve, router, stack, toHandler, _ref, _ref1,
+  __slice = [].slice,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 http = require('http');
 
@@ -126,12 +128,76 @@ Stack = (function() {
 
 })();
 
+makeURIPartRe = function(pattern) {
+  if (pattern[0] !== '/') {
+    pattern = "/" + pattern;
+  }
+  return RegExp("^" + pattern + "(/|$)");
+};
+
+overlay = function(obj, attrs) {
+  var k, newObj, v;
+  newObj = Object.create(obj);
+  for (k in attrs) {
+    v = attrs[k];
+    newObj[k] = v;
+  }
+  return newObj;
+};
+
+Router = (function(_super) {
+  __extends(Router, _super);
+
+  function Router() {
+    _ref1 = Router.__super__.constructor.apply(this, arguments);
+    return _ref1;
+  }
+
+  Router.prototype.use = function(pattern, handler) {
+    var wrapperHandler;
+    if (handler) {
+      if (!(pattern instanceof RegExp)) {
+        pattern = makeURIPartRe(pattern);
+      }
+      wrapperHandler = function(req, res, next) {
+        var m, newUrl;
+        m = pattern.exec(req.url);
+        if (m) {
+          newUrl = req.url.substring(m[0].length);
+          if (newUrl[0] !== '/') {
+            newUrl = "/" + newUrl;
+          }
+          req = overlay(req, {
+            url: newUrl
+          });
+          return handler(req, res, next);
+        } else {
+          return next();
+        }
+      };
+      return Router.__super__.use.call(this, wrapperHandler);
+    } else {
+      handler = pattern;
+      return Router.__super__.use.call(this, handler);
+    }
+  };
+
+  return Router;
+
+})(Stack);
+
 stack = function() {
   return new Stack;
+};
+
+router = function() {
+  return new Router;
 };
 
 module.exports = {
   createServer: createServer,
   Stack: Stack,
-  stack: stack
+  stack: stack,
+  Router: Router,
+  router: router
 };
