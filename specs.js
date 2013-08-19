@@ -18,11 +18,11 @@ throws = function(error, block) {
   return throwsFlip(block, error);
 };
 
-describe('Stack', function() {
-  it('works as a middleware stack', function(done) {
+describe('Tell', function() {
+  it('works as a middleware tell', function(done) {
     var app, trace;
     trace = [];
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       eq(req, 1);
       eq(res, 2);
       trace.push(0);
@@ -43,7 +43,7 @@ describe('Stack', function() {
   it('automatically calls next handler if no explicit call was made', function(done) {
     var app, trace;
     trace = [];
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       eq(req, 1);
       eq(res, 2);
       return trace.push(0);
@@ -60,21 +60,21 @@ describe('Stack', function() {
       return eq(trace[1], 1);
     }).then(done).end();
   });
-  it('handles empty stack', function(done) {
+  it('handles empty tell', function(done) {
     var app;
-    app = tell.stack();
+    app = tell();
     return app.handle(null).then(function(res) {
       return eq(res, void 0);
     }).then(done).end();
   });
-  it('allows delegating to sub-stacks', function(done) {
+  it('allows delegating to sub-tells', function(done) {
     var app, trace;
     trace = [];
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       eq(req, 1);
       eq(res, 2);
       return trace.push(0);
-    }).use(tell.stack().use(function(req, res, next) {
+    }).use(tell().use(function(req, res, next) {
       eq(req, 1);
       eq(res, 2);
       return trace.push(1);
@@ -94,7 +94,7 @@ describe('Stack', function() {
   });
   it('propagates thrown error to top level', function() {
     var app;
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       throw new Error('error');
     });
     return throws(Error, function() {
@@ -106,7 +106,7 @@ describe('Stack', function() {
   });
   it('propagates rejected promise to top level', function() {
     var app;
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       return reject(new Error('error'));
     });
     return throws(Error, function() {
@@ -118,7 +118,7 @@ describe('Stack', function() {
   });
   it('propagates passed error to top level', function() {
     var app;
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       return next(new Error('error'));
     });
     return throws(Error, function() {
@@ -131,7 +131,7 @@ describe('Stack', function() {
   it('catches thrown error with a handler', function(done) {
     var app, trace;
     trace = [];
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       throw new Error('error');
     })["catch"](function(err, req, res, next) {
       eq(req, 1);
@@ -152,7 +152,7 @@ describe('Stack', function() {
   it('catches rejected promise with a handler', function(done) {
     var app, trace;
     trace = [];
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       return reject(new Error('error'));
     })["catch"](function(err, req, res, next) {
       eq(req, 1);
@@ -173,7 +173,7 @@ describe('Stack', function() {
   it('catches passed error with a handler', function(done) {
     var app, trace;
     trace = [];
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       return next(new Error('error'));
     })["catch"](function(err, req, res, next) {
       eq(req, 1);
@@ -194,7 +194,7 @@ describe('Stack', function() {
   it('propagates re-thrown error', function() {
     var app, trace;
     trace = [];
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       throw new Error('error');
     })["catch"](function(err, req, res, next) {
       ok(err);
@@ -212,7 +212,7 @@ describe('Stack', function() {
   it('propagates re-rejected promise', function() {
     var app, trace;
     trace = [];
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       return reject(new Error('error'));
     })["catch"](function(err, req, res, next) {
       ok(err);
@@ -227,10 +227,10 @@ describe('Stack', function() {
       }).end();
     });
   });
-  return it('propagates re-passed error', function() {
+  it('propagates re-passed error', function() {
     var app, trace;
     trace = [];
-    app = tell.stack().use(function(req, res, next) {
+    app = tell().use(function(req, res, next) {
       return next(new Error('error'));
     })["catch"](function(err, req, res, next) {
       ok(err);
@@ -245,32 +245,11 @@ describe('Stack', function() {
       }).end();
     });
   });
-});
-
-describe('Router', function() {
-  describe('routing to endpoints', function() {
-    return it('routes by method and URI pattern', function(done) {
-      var app, trace;
-      trace = [];
-      app = tell.router().get('/info', function(req, res) {
-        return trace.push(1);
-      }).post('/info', function(req, res) {
-        return trace.push(2);
-      });
-      return app.handle(null, {
-        url: '/info',
-        method: 'POST'
-      }).then(function(res) {
-        eq(trace.length, 1);
-        return eq(trace[0], 2);
-      }).then(done).end();
-    });
-  });
-  return describe('mounting a handler under a pattern', function() {
+  describe('mounting a handler under a pattern', function() {
     it('responds to exact match', function(done) {
       var app, trace;
       trace = [];
-      app = tell.router().use('/a', function(req, res) {
+      app = tell().use('/a', function(req, res) {
         eq(req.url, '/');
         return trace.push(1);
       }).use('/b', function(req, res) {
@@ -290,7 +269,7 @@ describe('Router', function() {
     it('responds to match of a leading part', function(done) {
       var app, trace;
       trace = [];
-      app = tell.router().use('/a', function(req, res) {
+      app = tell().use('/a', function(req, res) {
         eq(req.url, '/b');
         return trace.push(1);
       }).use('/b', function(req, res) {
@@ -310,7 +289,7 @@ describe('Router', function() {
     it('does not respond to arbitrary match of a leading part', function(done) {
       var app, trace;
       trace = [];
-      app = tell.router().use('/a', function(req, res) {
+      app = tell().use('/a', function(req, res) {
         return trace.push(1);
       }).use('/b', function(req, res) {
         return trace.push(2);
@@ -327,7 +306,7 @@ describe('Router', function() {
     return it('does not respond to a no match case', function(done) {
       var app, trace;
       trace = [];
-      app = tell.router().use('/a', function(req, res) {
+      app = tell().use('/a', function(req, res) {
         return trace.push(1);
       }).use('/b', function(req, res) {
         return trace.push(2);
@@ -339,6 +318,24 @@ describe('Router', function() {
       }).then(function(res) {
         eq(trace.length, 1);
         return eq(trace[0], 3);
+      }).then(done).end();
+    });
+  });
+  return describe('routing to endpoints', function() {
+    return it('routes by method and URI pattern', function(done) {
+      var app, trace;
+      trace = [];
+      app = tell().get('/info', function(req, res) {
+        return trace.push(1);
+      }).post('/info', function(req, res) {
+        return trace.push(2);
+      });
+      return app.handle(null, {
+        url: '/info',
+        method: 'POST'
+      }).then(function(res) {
+        eq(trace.length, 1);
+        return eq(trace[0], 2);
       }).then(done).end();
     });
   });

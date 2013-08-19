@@ -6,10 +6,8 @@
   2013 (c) Andrey Popp <8mayday@gmail.com>
 */
 
-var Router, Stack, asPromise, createServer, http, makeURIPartRe, makeURIRe, overlay, reject, resolve, router, stack, toHandler, _ref, _ref1,
-  __slice = [].slice,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+var Tell, asPromise, createServer, http, k, makeURIPrefixRe, makeURIRe, overlay, reject, resolve, toHandler, v, _ref, _ref1,
+  __slice = [].slice;
 
 http = require('http');
 
@@ -42,18 +40,22 @@ toHandler = function(h) {
   }
 };
 
-makeURIPartRe = function(pattern) {
-  if (pattern[0] !== '/') {
-    pattern = "/" + pattern;
+makeURIPrefixRe = function(pattern) {
+  if (pattern) {
+    if (pattern[0] !== '/') {
+      pattern = "/" + pattern;
+    }
+    return RegExp("^" + pattern + "(/|$)");
   }
-  return RegExp("^" + pattern + "(/|$)");
 };
 
 makeURIRe = function(pattern) {
-  if (pattern[0] !== '/') {
-    pattern = "/" + pattern;
+  if (pattern) {
+    if (pattern[0] !== '/') {
+      pattern = "/" + pattern;
+    }
+    return RegExp("^" + pattern + "$");
   }
-  return RegExp("^" + pattern + "$");
 };
 
 overlay = function(obj, attrs) {
@@ -66,58 +68,121 @@ overlay = function(obj, attrs) {
   return newObj;
 };
 
-Stack = (function() {
-  function Stack(handlers) {
+Tell = (function() {
+  var method, _fn, _i, _len, _ref1,
+    _this = this;
+
+  function Tell(handlers) {
     if (handlers == null) {
       handlers = [];
     }
     this.handlers = handlers;
   }
 
-  Stack.prototype.use = function(handler) {
+  Tell.prototype.use = function(prefix, handler) {
+    if (handler == null) {
+      handler = prefix;
+      prefix = void 0;
+    }
     this.handlers.push({
+      pattern: makeURIPrefixRe(prefix),
       onSuccess: toHandler(handler)
     });
     return this;
   };
 
-  Stack.prototype["catch"] = function(handler) {
+  Tell.prototype["catch"] = function(handler) {
     this.handlers.push({
       onError: toHandler(handler)
     });
     return this;
   };
 
-  Stack.prototype.listen = function() {
-    var args, _ref1;
+  _ref1 = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'LINK', 'UNLINK'];
+  _fn = function(method) {
+    return Tell.prototype[method.toLowerCase()] = function(pattern, handler) {
+      if (!(pattern instanceof RegExp)) {
+        pattern = makeURIRe(pattern);
+      }
+      this.handlers.push({
+        pattern: pattern,
+        method: method,
+        onSuccess: handler,
+        originalReq: true
+      });
+      return this;
+    };
+  };
+  for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+    method = _ref1[_i];
+    _fn(method);
+  }
+
+  Tell.prototype.listen = function() {
+    var args, _ref2;
     args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-    return (_ref1 = createServer(this.toHandler())).listen.apply(_ref1, args);
+    return (_ref2 = createServer(this.toHandler())).listen.apply(_ref2, args);
   };
 
-  Stack.prototype.toHandler = function() {
+  Tell.prototype.toHandler = function() {
     return this.handle.bind(this);
   };
 
-  Stack.prototype.handle = function(err, req, res, next) {
-    var handlers, nextHandler, process;
+  Tell.prototype.matchTarget = function(target, req, options) {
+    var m, newUrl;
+    if (options.pattern) {
+      m = options.pattern.exec(req.url);
+      if (!m) {
+        return;
+      }
+      if (!options.originalReq) {
+        newUrl = req.url.substring(m[0].length);
+        if (newUrl[0] !== '/') {
+          newUrl = "/" + newUrl;
+        }
+        req = overlay(req, {
+          url: newUrl
+        });
+      }
+    }
+    if (options.method) {
+      if (req.method !== options.method) {
+        return;
+      }
+    }
+    return {
+      target: target,
+      localReq: req
+    };
+  };
+
+  Tell.prototype.handle = function(err, req, res, next) {
+    var findHandler, handlers, process,
+      _this = this;
     handlers = this.handlers.slice(0);
-    nextHandler = function(name) {
-      var handler;
+    findHandler = function(name, req) {
+      var handler, match, target;
       while (handlers.length > 0) {
         handler = handlers.shift();
-        if (handler[name]) {
-          return handler[name];
+        target = handler[name];
+        if (!target) {
+          return;
+        }
+        match = _this.matchTarget(target, req, handler);
+        if (match != null) {
+          return match;
         }
       }
     };
     process = function(err, result) {
-      var callNext, handled, handler, nextIsCalled;
+      var callNext, handled, handler, handlerName, localReq, nextIsCalled, target;
       nextIsCalled = false;
       callNext = function(err, result) {
         nextIsCalled = true;
         return process(err, result);
       };
-      handler = nextHandler(err ? 'onError' : 'onSuccess');
+      handlerName = err ? 'onError' : 'onSuccess';
+      handler = findHandler(handlerName, req);
       if (!handler) {
         if (next != null) {
           return asPromise(next, err, result);
@@ -129,7 +194,8 @@ Stack = (function() {
           }
         }
       } else {
-        handled = handler.length === 4 ? asPromise(handler, err, req, res, callNext) : asPromise(handler, req, res, callNext);
+        target = handler.target, localReq = handler.localReq;
+        handled = target.length === 4 ? asPromise(target, err, localReq, res, callNext) : asPromise(target, localReq, res, callNext);
         return handled.then(function(result) {
           if (nextIsCalled) {
             return result;
@@ -148,93 +214,19 @@ Stack = (function() {
     return process(err);
   };
 
-  return Stack;
+  return Tell;
 
-})();
+}).call(this);
 
-Router = (function(_super) {
-  var method, _fn, _i, _len, _ref2,
-    _this = this;
-
-  __extends(Router, _super);
-
-  function Router() {
-    _ref1 = Router.__super__.constructor.apply(this, arguments);
-    return _ref1;
-  }
-
-  Router.prototype.use = function(pattern, handler, _mangle) {
-    var wrapperHandler;
-    if (_mangle == null) {
-      _mangle = true;
-    }
-    if (handler) {
-      if (!(pattern instanceof RegExp)) {
-        pattern = makeURIPartRe(pattern);
-      }
-      wrapperHandler = function(req, res, next) {
-        var m, newUrl;
-        m = pattern.exec(req.url);
-        if (m) {
-          if (_mangle) {
-            newUrl = req.url.substring(m[0].length);
-            if (newUrl[0] !== '/') {
-              newUrl = "/" + newUrl;
-            }
-            req = overlay(req, {
-              url: newUrl
-            });
-          }
-          return handler(req, res, next);
-        } else {
-          return next();
-        }
-      };
-      return Router.__super__.use.call(this, wrapperHandler);
-    } else {
-      handler = pattern;
-      return Router.__super__.use.call(this, handler);
-    }
-  };
-
-  _ref2 = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'LINK', 'UNLINK'];
-  _fn = function(method) {
-    return Router.prototype[method.toLowerCase()] = function(pattern, handler) {
-      var wrapperHandler;
-      if (!(pattern instanceof RegExp)) {
-        pattern = makeURIRe(pattern);
-      }
-      wrapperHandler = function(req, res, next) {
-        if (req.method === method) {
-          return handler(req, res, next);
-        } else {
-          return next();
-        }
-      };
-      return this.use(pattern, wrapperHandler, false);
-    };
-  };
-  for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-    method = _ref2[_i];
-    _fn(method);
-  }
-
-  return Router;
-
-}).call(this, Stack);
-
-stack = function() {
-  return new Stack;
+module.exports = function() {
+  return new Tell;
 };
 
-router = function() {
-  return new Router;
-};
-
-module.exports = {
+_ref1 = {
   createServer: createServer,
-  Stack: Stack,
-  stack: stack,
-  Router: Router,
-  router: router
+  Tell: Tell
 };
+for (k in _ref1) {
+  v = _ref1[k];
+  module.exports[k] = v;
+}

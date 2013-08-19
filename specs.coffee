@@ -13,11 +13,11 @@ tell                                  = require './index'
 throws = (error, block) ->
   throwsFlip block, error
 
-describe 'Stack', ->
+describe 'Tell', ->
 
-  it 'works as a middleware stack', (done) ->
+  it 'works as a middleware tell', (done) ->
     trace = []
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         eq req, 1
         eq res, 2
@@ -39,7 +39,7 @@ describe 'Stack', ->
 
   it 'automatically calls next handler if no explicit call was made', (done) ->
     trace = []
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         eq req, 1
         eq res, 2
@@ -58,22 +58,22 @@ describe 'Stack', ->
       .then(done)
       .end()
 
-  it 'handles empty stack', (done) ->
-    app = tell.stack()
+  it 'handles empty tell', (done) ->
+    app = tell()
     app.handle(null)
       .then (res) ->
         eq res, undefined
       .then(done)
       .end()
 
-  it 'allows delegating to sub-stacks', (done) ->
+  it 'allows delegating to sub-tells', (done) ->
     trace = []
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         eq req, 1
         eq res, 2
         trace.push 0
-      .use tell.stack()
+      .use tell()
         .use (req, res, next) ->
           eq req, 1
           eq res, 2
@@ -94,7 +94,7 @@ describe 'Stack', ->
       .end()
 
   it 'propagates thrown error to top level', ->
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) -> 
         throw new Error('error')
     throws Error, ->
@@ -105,7 +105,7 @@ describe 'Stack', ->
         .end()
 
   it 'propagates rejected promise to top level', ->
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         reject new Error('error')
     throws Error, ->
@@ -116,7 +116,7 @@ describe 'Stack', ->
         .end()
 
   it 'propagates passed error to top level', ->
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         next new Error('error')
     throws Error, ->
@@ -128,7 +128,7 @@ describe 'Stack', ->
 
   it 'catches thrown error with a handler', (done) ->
     trace = []
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         throw new Error('error')
       .catch (err, req, res, next) ->
@@ -150,7 +150,7 @@ describe 'Stack', ->
 
   it 'catches rejected promise with a handler', (done) ->
     trace = []
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         reject new Error('error')
       .catch (err, req, res, next) ->
@@ -172,7 +172,7 @@ describe 'Stack', ->
 
   it 'catches passed error with a handler', (done) ->
     trace = []
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         next new Error('error')
       .catch (err, req, res, next) ->
@@ -194,7 +194,7 @@ describe 'Stack', ->
 
   it 'propagates re-thrown error', ->
     trace = []
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         throw new Error('error')
       .catch (err, req, res, next) ->
@@ -211,7 +211,7 @@ describe 'Stack', ->
 
   it 'propagates re-rejected promise', ->
     trace = []
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         reject new Error('error')
       .catch (err, req, res, next) ->
@@ -228,7 +228,7 @@ describe 'Stack', ->
 
   it 'propagates re-passed error', ->
     trace = []
-    app = tell.stack()
+    app = tell()
       .use (req, res, next) ->
         next new Error('error')
       .catch (err, req, res, next) ->
@@ -243,29 +243,11 @@ describe 'Stack', ->
           throw err
         .end()
 
-describe 'Router', ->
-
-  describe 'routing to endpoints', ->
-
-    it 'routes by method and URI pattern', (done) ->
-      trace = []
-      app = tell.router()
-        .get '/info', (req, res) ->
-          trace.push 1
-        .post '/info', (req, res) ->
-          trace.push 2
-      app.handle(null, {url: '/info', method: 'POST'})
-        .then (res) ->
-          eq trace.length, 1
-          eq trace[0], 2
-        .then(done)
-        .end()
-
   describe 'mounting a handler under a pattern', ->
 
     it 'responds to exact match', (done) ->
       trace = []
-      app = tell.router()
+      app = tell()
         .use '/a', (req, res) ->
           eq req.url, '/'
           trace.push 1
@@ -285,7 +267,7 @@ describe 'Router', ->
 
     it 'responds to match of a leading part', (done) ->
       trace = []
-      app = tell.router()
+      app = tell()
         .use '/a', (req, res) ->
           eq req.url, '/b'
           trace.push 1
@@ -305,7 +287,7 @@ describe 'Router', ->
 
     it 'does not respond to arbitrary match of a leading part', (done) ->
       trace = []
-      app = tell.router()
+      app = tell()
         .use '/a', (req, res) ->
           trace.push 1
         .use '/b', (req, res) ->
@@ -322,7 +304,7 @@ describe 'Router', ->
 
     it 'does not respond to a no match case', (done) ->
       trace = []
-      app = tell.router()
+      app = tell()
         .use '/a', (req, res) ->
           trace.push 1
         .use '/b', (req, res) ->
@@ -334,5 +316,21 @@ describe 'Router', ->
         .then (res) ->
           eq trace.length, 1
           eq trace[0], 3
+        .then(done)
+        .end()
+
+  describe 'routing to endpoints', ->
+
+    it 'routes by method and URI pattern', (done) ->
+      trace = []
+      app = tell()
+        .get '/info', (req, res) ->
+          trace.push 1
+        .post '/info', (req, res) ->
+          trace.push 2
+      app.handle(null, {url: '/info', method: 'POST'})
+        .then (res) ->
+          eq trace.length, 1
+          eq trace[0], 2
         .then(done)
         .end()
