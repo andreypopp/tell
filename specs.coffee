@@ -245,6 +245,22 @@ describe 'Stack', ->
 
 describe 'Router', ->
 
+  describe 'routing to endpoints', ->
+
+    it 'routes by method and URI pattern', (done) ->
+      trace = []
+      app = tell.router()
+        .get '/info', (req, res) ->
+          trace.push 1
+        .post '/info', (req, res) ->
+          trace.push 2
+      app.handle(null, {url: '/info', method: 'POST'})
+        .then (res) ->
+          eq trace.length, 1
+          eq trace[0], 2
+        .then(done)
+        .end()
+
   describe 'mounting a handler under a pattern', ->
 
     it 'responds to exact match', (done) ->

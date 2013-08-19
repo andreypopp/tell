@@ -248,6 +248,24 @@ describe('Stack', function() {
 });
 
 describe('Router', function() {
+  describe('routing to endpoints', function() {
+    return it('routes by method and URI pattern', function(done) {
+      var app, trace;
+      trace = [];
+      app = tell.router().get('/info', function(req, res) {
+        return trace.push(1);
+      }).post('/info', function(req, res) {
+        return trace.push(2);
+      });
+      return app.handle(null, {
+        url: '/info',
+        method: 'POST'
+      }).then(function(res) {
+        eq(trace.length, 1);
+        return eq(trace[0], 2);
+      }).then(done).end();
+    });
+  });
   return describe('mounting a handler under a pattern', function() {
     it('responds to exact match', function(done) {
       var app, trace;

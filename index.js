@@ -6,7 +6,7 @@
   2013 (c) Andrey Popp <8mayday@gmail.com>
 */
 
-var Router, Stack, asPromise, createServer, http, makeURIPartRe, overlay, reject, resolve, router, stack, toHandler, _ref, _ref1,
+var Router, Stack, asPromise, createServer, http, makeURIPartRe, makeURIRe, overlay, reject, resolve, router, stack, toHandler, _ref, _ref1,
   __slice = [].slice,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -47,6 +47,13 @@ makeURIPartRe = function(pattern) {
     pattern = "/" + pattern;
   }
   return RegExp("^" + pattern + "(/|$)");
+};
+
+makeURIRe = function(pattern) {
+  if (pattern[0] !== '/') {
+    pattern = "/" + pattern;
+  }
+  return RegExp("^" + pattern + "$");
 };
 
 overlay = function(obj, attrs) {
@@ -146,6 +153,9 @@ Stack = (function() {
 })();
 
 Router = (function(_super) {
+  var method, _fn, _i, _len, _ref2,
+    _this = this;
+
   __extends(Router, _super);
 
   function Router() {
@@ -153,8 +163,11 @@ Router = (function(_super) {
     return _ref1;
   }
 
-  Router.prototype.use = function(pattern, handler) {
+  Router.prototype.use = function(pattern, handler, _mangle) {
     var wrapperHandler;
+    if (_mangle == null) {
+      _mangle = true;
+    }
     if (handler) {
       if (!(pattern instanceof RegExp)) {
         pattern = makeURIPartRe(pattern);
@@ -163,13 +176,15 @@ Router = (function(_super) {
         var m, newUrl;
         m = pattern.exec(req.url);
         if (m) {
-          newUrl = req.url.substring(m[0].length);
-          if (newUrl[0] !== '/') {
-            newUrl = "/" + newUrl;
+          if (_mangle) {
+            newUrl = req.url.substring(m[0].length);
+            if (newUrl[0] !== '/') {
+              newUrl = "/" + newUrl;
+            }
+            req = overlay(req, {
+              url: newUrl
+            });
           }
-          req = overlay(req, {
-            url: newUrl
-          });
           return handler(req, res, next);
         } else {
           return next();
@@ -182,9 +197,31 @@ Router = (function(_super) {
     }
   };
 
+  _ref2 = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'LINK', 'UNLINK'];
+  _fn = function(method) {
+    return Router.prototype[method.toLowerCase()] = function(pattern, handler) {
+      var wrapperHandler;
+      if (!(pattern instanceof RegExp)) {
+        pattern = makeURIRe(pattern);
+      }
+      wrapperHandler = function(req, res, next) {
+        if (req.method === method) {
+          return handler(req, res, next);
+        } else {
+          return next();
+        }
+      };
+      return this.use(pattern, wrapperHandler, false);
+    };
+  };
+  for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+    method = _ref2[_i];
+    _fn(method);
+  }
+
   return Router;
 
-})(Stack);
+}).call(this, Stack);
 
 stack = function() {
   return new Stack;

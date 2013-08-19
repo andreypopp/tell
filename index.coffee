@@ -28,6 +28,10 @@ makeURIPartRe = (pattern) ->
   pattern = "/#{pattern}" unless pattern[0] == '/'
   ///^#{pattern}(/|$)///
 
+makeURIRe = (pattern) ->
+  pattern = "/#{pattern}" unless pattern[0] == '/'
+  ///^#{pattern}$///
+
 overlay = (obj, attrs) ->
   newObj = Object.create(obj)
   for k, v of attrs
@@ -92,15 +96,16 @@ class Stack
 
 class Router extends Stack
 
-  use: (pattern, handler) ->
+  use: (pattern, handler, _mangle = true) ->
     if handler
       pattern = makeURIPartRe pattern unless pattern instanceof RegExp
       wrapperHandler = (req, res, next) ->
         m = pattern.exec req.url
         if m
-          newUrl = req.url.substring(m[0].length)
-          newUrl = "/#{newUrl}" unless newUrl[0] == '/'
-          req = overlay req, url: newUrl
+          if _mangle
+            newUrl = req.url.substring(m[0].length)
+            newUrl = "/#{newUrl}" unless newUrl[0] == '/'
+            req = overlay req, url: newUrl
           handler(req, res, next)
         else
           next()
@@ -108,6 +113,18 @@ class Router extends Stack
     else
       handler = pattern
       super handler
+
+  for method in ['GET', 'HEAD', 'POST', 'PUT', 'DELETE',
+                 'PATCH', 'OPTIONS', 'LINK', 'UNLINK']
+    do (method) =>
+      this.prototype[method.toLowerCase()] = (pattern, handler) ->
+        pattern = makeURIRe pattern unless pattern instanceof RegExp
+        wrapperHandler = (req, res, next) ->
+          if req.method == method
+            handler(req, res, next)
+          else
+            next()
+        this.use pattern, wrapperHandler, false
 
 stack = -> new Stack
 router = -> new Router
