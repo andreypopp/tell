@@ -19,16 +19,16 @@ describe 'Tell', ->
     trace = []
     app = tell()
       .use (req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         trace.push 0
         next()
       .use (req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         trace.push 1
         'ok'
-    app.handle(null, 1, 2)
+    app.handle(null, {req: true}, {res: true})
       .then (res) ->
         eq res, 'ok'
         eq trace.length, 2
@@ -41,15 +41,15 @@ describe 'Tell', ->
     trace = []
     app = tell()
       .use (req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         trace.push 0
       .use (req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         trace.push 1
         'ok'
-    app.handle(null, 1, 2)
+    app.handle(null, {req: true}, {res: true})
       .then (res) ->
         eq res, 'ok'
         eq trace.length, 2
@@ -60,7 +60,7 @@ describe 'Tell', ->
 
   it 'handles empty tell', (done) ->
     app = tell()
-    app.handle(null)
+    app.handle(null, {req: true}, {res: true})
       .then (res) ->
         eq res, undefined
       .then(done)
@@ -70,20 +70,20 @@ describe 'Tell', ->
     trace = []
     app = tell()
       .use (req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         trace.push 0
       .use tell()
         .use (req, res, next) ->
-          eq req, 1
-          eq res, 2
+          ok req.req
+          ok res.res
           trace.push 1
         .use (req, res, next) ->
-          eq req, 1
-          eq res, 2
+          ok req.req
+          ok res.res
           trace.push 2
           'ok'
-    app.handle(null, 1, 2)
+    app.handle(null, {req: true}, {res: true})
       .then (res) ->
         eq res, 'ok'
         eq trace.length, 3
@@ -98,7 +98,7 @@ describe 'Tell', ->
       .use (req, res, next) -> 
         throw new Error('error')
     throws Error, ->
-      app.handle(null)
+      app.handle(null, {req: true}, {res: true})
         .fail (err) ->
           ok err
           throw err
@@ -109,7 +109,7 @@ describe 'Tell', ->
       .use (req, res, next) ->
         reject new Error('error')
     throws Error, ->
-      app.handle(null)
+      app.handle(null, {req: true}, {res: true})
         .fail (err) ->
           ok err
           throw err
@@ -120,7 +120,7 @@ describe 'Tell', ->
       .use (req, res, next) ->
         next new Error('error')
     throws Error, ->
-      app.handle(null)
+      app.handle(null, {req: true}, {res: true})
         .fail (err) ->
           ok err
           throw err
@@ -132,16 +132,16 @@ describe 'Tell', ->
       .use (req, res, next) ->
         throw new Error('error')
       .catch (err, req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         ok err
         trace.push 1
       .use (req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         trace.push 2
         'ok'
-    app.handle(null, 1, 2)
+    app.handle(null, {req: true}, {res: true})
       .then (res) ->
         eq res, 'ok'
         eq trace.length, 2
@@ -154,16 +154,16 @@ describe 'Tell', ->
       .use (req, res, next) ->
         reject new Error('error')
       .catch (err, req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         ok err
         trace.push 1
       .use (req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         trace.push 2
         'ok'
-    app.handle(null, 1, 2)
+    app.handle(null, {req: true}, {res: true})
       .then (res) ->
         eq res, 'ok'
         eq trace.length, 2
@@ -176,16 +176,16 @@ describe 'Tell', ->
       .use (req, res, next) ->
         next new Error('error')
       .catch (err, req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         ok err
         trace.push 1
       .use (req, res, next) ->
-        eq req, 1
-        eq res, 2
+        ok req.req
+        ok res.res
         trace.push 2
         'ok'
-    app.handle(null, 1, 2)
+    app.handle(null, {req: true}, {res: true})
       .then (res) ->
         eq res, 'ok'
         eq trace.length, 2
@@ -202,7 +202,7 @@ describe 'Tell', ->
         trace.push 1
         throw err
     throws Error, ->
-      app.handle(null, 1, 2)
+      app.handle(null, {req: true}, {res: true})
         .fail (err) ->
           ok err
           eq trace.length, 1
@@ -219,7 +219,7 @@ describe 'Tell', ->
         trace.push 1
         reject err
     throws Error, ->
-      app.handle(null)
+      app.handle(null, {req: true}, {res: true})
         .fail (err) ->
           ok err
           eq trace.length, 1
@@ -236,7 +236,7 @@ describe 'Tell', ->
         trace.push 1
         next err
     throws Error, ->
-      app.handle(null)
+      app.handle(null, {req: true}, {res: true})
         .fail (err) ->
           ok err
           eq trace.length, 1
@@ -257,7 +257,7 @@ describe 'Tell', ->
           eq req.url, '/a'
           trace.push 3
 
-      app.handle(null, {url: '/a'})
+      app.handle(null, {url: '/a'}, {res: true})
         .then (res) ->
           eq trace.length, 2
           eq trace[0], 1
@@ -277,7 +277,7 @@ describe 'Tell', ->
           eq req.url, '/a/b'
           trace.push 3
 
-      app.handle(null, {url: '/a/b'})
+      app.handle(null, {url: '/a/b'}, {res: true})
         .then (res) ->
           eq trace.length, 2
           eq trace[0], 1
@@ -295,7 +295,7 @@ describe 'Tell', ->
         .use (req, res) ->
           trace.push 3
 
-      app.handle(null, {url: '/ab'})
+      app.handle(null, {url: '/ab'}, {res: true})
         .then (res) ->
           eq trace.length, 1
           eq trace[0], 3
@@ -312,7 +312,7 @@ describe 'Tell', ->
         .use (req, res) ->
           trace.push 3
 
-      app.handle(null, {url: '/c'})
+      app.handle(null, {url: '/c'}, {res: true})
         .then (res) ->
           eq trace.length, 1
           eq trace[0], 3
@@ -328,7 +328,7 @@ describe 'Tell', ->
           trace.push 1
         .post '/info', (req, res) ->
           trace.push 2
-      app.handle(null, {url: '/info', method: 'POST'})
+      app.handle(null, {url: '/info', method: 'POST'}, {res: true})
         .then (res) ->
           eq trace.length, 1
           eq trace[0], 2

@@ -11,9 +11,13 @@ http              = require 'http'
 
 createServer = (handler) ->
   http.createServer (req, res) ->
-    handler(null, req, res, resolve)
-      .then -> res.end()
-      .end()
+    handler(null, req, res)
+      .then ->
+        res.end()
+      .fail (err) ->
+        stackTrace = err.stack.toString()
+        res.end err.stack.toString()
+        console.error stackTrace
 
 asPromise = (func, args...) ->
   try
@@ -39,6 +43,18 @@ overlay = (obj, attrs) ->
   for k, v of attrs
     newObj[k] = v
   newObj
+
+ResponsePrototype =
+
+  __decorated:
+    writable: false
+    enumerable: false
+    value: true
+
+  send:
+    value: (code, obj) ->
+      this.writeHead code
+      this.end JSON.stringify obj
 
 class Tell
 
@@ -94,6 +110,8 @@ class Tell
   handle: (err, req, res, next) ->
     handlers = this.handlers.slice(0)
 
+    res = Object.create(res, ResponsePrototype) unless res.__decorated
+
     findHandler = (name, req) =>
       while handlers.length > 0
         handler = handlers.shift()
@@ -118,13 +136,12 @@ class Tell
         else
           if err then reject(err) else resolve(result)
 
-
       else
         {target, localReq} = handler
 
         handled = if target.length == 4
           asPromise(target, err, localReq, res, callNext)
-        else 
+        else
           asPromise(target, localReq, res, callNext)
 
         handled

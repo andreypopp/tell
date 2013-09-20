@@ -6,7 +6,7 @@
   2013 (c) Andrey Popp <8mayday@gmail.com>
 */
 
-var Tell, asPromise, createServer, http, k, makeURIPrefixRe, makeURIRe, overlay, reject, resolve, toHandler, v, _ref, _ref1,
+var ResponsePrototype, Tell, asPromise, createServer, http, k, makeURIPrefixRe, makeURIRe, overlay, reject, resolve, toHandler, v, _ref, _ref1,
   __slice = [].slice;
 
 http = require('http');
@@ -15,8 +15,13 @@ _ref = require('kew'), resolve = _ref.resolve, reject = _ref.reject;
 
 createServer = function(handler) {
   return http.createServer(function(req, res) {
-    return handler(null, req, res, resolve).then(function() {
-      return res.end().end();
+    return handler(null, req, res).then(function() {
+      return res.end();
+    }).fail(function(err) {
+      var stackTrace;
+      stackTrace = err.stack.toString();
+      res.end(err.stack.toString());
+      return console.error(stackTrace);
     });
   });
 };
@@ -66,6 +71,20 @@ overlay = function(obj, attrs) {
     newObj[k] = v;
   }
   return newObj;
+};
+
+ResponsePrototype = {
+  __decorated: {
+    writable: false,
+    enumerable: false,
+    value: true
+  },
+  send: {
+    value: function(code, obj) {
+      this.writeHead(code);
+      return this.end(JSON.stringify(obj));
+    }
+  }
 };
 
 Tell = (function() {
@@ -160,6 +179,9 @@ Tell = (function() {
     var findHandler, handlers, process,
       _this = this;
     handlers = this.handlers.slice(0);
+    if (!res.__decorated) {
+      res = Object.create(res, ResponsePrototype);
+    }
     findHandler = function(name, req) {
       var handler, match, target;
       while (handlers.length > 0) {

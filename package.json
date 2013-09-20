@@ -2,7 +2,7 @@
   "name": "tell",
   "version": "0.0.0",
   "description": "Promise-based web library",
-  "main": "index.js",
+  "main": "index",
   "scripts": {
     "test": "make test"
   },
@@ -18,7 +18,8 @@
   "author": "Andrey Popp <8mayday@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "kew": "~0.1.7"
+    "kew": "~0.1.7",
+    "url-pattern": "~0.2.1"
   },
   "devDependencies": {
     "semver": "~2.1.0",

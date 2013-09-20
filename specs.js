@@ -23,17 +23,21 @@ describe('Tell', function() {
     var app, trace;
     trace = [];
     app = tell().use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       trace.push(0);
       return next();
     }).use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       trace.push(1);
       return 'ok';
     });
-    return app.handle(null, 1, 2).then(function(res) {
+    return app.handle(null, {
+      req: true
+    }, {
+      res: true
+    }).then(function(res) {
       eq(res, 'ok');
       eq(trace.length, 2);
       eq(trace[0], 0);
@@ -44,16 +48,20 @@ describe('Tell', function() {
     var app, trace;
     trace = [];
     app = tell().use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       return trace.push(0);
     }).use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       trace.push(1);
       return 'ok';
     });
-    return app.handle(null, 1, 2).then(function(res) {
+    return app.handle(null, {
+      req: true
+    }, {
+      res: true
+    }).then(function(res) {
       eq(res, 'ok');
       eq(trace.length, 2);
       eq(trace[0], 0);
@@ -63,7 +71,11 @@ describe('Tell', function() {
   it('handles empty tell', function(done) {
     var app;
     app = tell();
-    return app.handle(null).then(function(res) {
+    return app.handle(null, {
+      req: true
+    }, {
+      res: true
+    }).then(function(res) {
       return eq(res, void 0);
     }).then(done).end();
   });
@@ -71,20 +83,24 @@ describe('Tell', function() {
     var app, trace;
     trace = [];
     app = tell().use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       return trace.push(0);
     }).use(tell().use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       return trace.push(1);
     }).use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       trace.push(2);
       return 'ok';
     }));
-    return app.handle(null, 1, 2).then(function(res) {
+    return app.handle(null, {
+      req: true
+    }, {
+      res: true
+    }).then(function(res) {
       eq(res, 'ok');
       eq(trace.length, 3);
       eq(trace[0], 0);
@@ -98,7 +114,11 @@ describe('Tell', function() {
       throw new Error('error');
     });
     return throws(Error, function() {
-      return app.handle(null).fail(function(err) {
+      return app.handle(null, {
+        req: true
+      }, {
+        res: true
+      }).fail(function(err) {
         ok(err);
         throw err;
       }).end();
@@ -110,7 +130,11 @@ describe('Tell', function() {
       return reject(new Error('error'));
     });
     return throws(Error, function() {
-      return app.handle(null).fail(function(err) {
+      return app.handle(null, {
+        req: true
+      }, {
+        res: true
+      }).fail(function(err) {
         ok(err);
         throw err;
       }).end();
@@ -122,7 +146,11 @@ describe('Tell', function() {
       return next(new Error('error'));
     });
     return throws(Error, function() {
-      return app.handle(null).fail(function(err) {
+      return app.handle(null, {
+        req: true
+      }, {
+        res: true
+      }).fail(function(err) {
         ok(err);
         throw err;
       }).end();
@@ -134,17 +162,21 @@ describe('Tell', function() {
     app = tell().use(function(req, res, next) {
       throw new Error('error');
     })["catch"](function(err, req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       ok(err);
       return trace.push(1);
     }).use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       trace.push(2);
       return 'ok';
     });
-    return app.handle(null, 1, 2).then(function(res) {
+    return app.handle(null, {
+      req: true
+    }, {
+      res: true
+    }).then(function(res) {
       eq(res, 'ok');
       return eq(trace.length, 2);
     }).then(done).end();
@@ -155,17 +187,21 @@ describe('Tell', function() {
     app = tell().use(function(req, res, next) {
       return reject(new Error('error'));
     })["catch"](function(err, req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       ok(err);
       return trace.push(1);
     }).use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       trace.push(2);
       return 'ok';
     });
-    return app.handle(null, 1, 2).then(function(res) {
+    return app.handle(null, {
+      req: true
+    }, {
+      res: true
+    }).then(function(res) {
       eq(res, 'ok');
       return eq(trace.length, 2);
     }).then(done).end();
@@ -176,17 +212,21 @@ describe('Tell', function() {
     app = tell().use(function(req, res, next) {
       return next(new Error('error'));
     })["catch"](function(err, req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       ok(err);
       return trace.push(1);
     }).use(function(req, res, next) {
-      eq(req, 1);
-      eq(res, 2);
+      ok(req.req);
+      ok(res.res);
       trace.push(2);
       return 'ok';
     });
-    return app.handle(null, 1, 2).then(function(res) {
+    return app.handle(null, {
+      req: true
+    }, {
+      res: true
+    }).then(function(res) {
       eq(res, 'ok');
       return eq(trace.length, 2);
     }).then(done).end();
@@ -202,7 +242,11 @@ describe('Tell', function() {
       throw err;
     });
     return throws(Error, function() {
-      return app.handle(null, 1, 2).fail(function(err) {
+      return app.handle(null, {
+        req: true
+      }, {
+        res: true
+      }).fail(function(err) {
         ok(err);
         eq(trace.length, 1);
         throw err;
@@ -220,7 +264,11 @@ describe('Tell', function() {
       return reject(err);
     });
     return throws(Error, function() {
-      return app.handle(null).fail(function(err) {
+      return app.handle(null, {
+        req: true
+      }, {
+        res: true
+      }).fail(function(err) {
         ok(err);
         eq(trace.length, 1);
         throw err;
@@ -238,7 +286,11 @@ describe('Tell', function() {
       return next(err);
     });
     return throws(Error, function() {
-      return app.handle(null).fail(function(err) {
+      return app.handle(null, {
+        req: true
+      }, {
+        res: true
+      }).fail(function(err) {
         ok(err);
         eq(trace.length, 1);
         throw err;
@@ -260,6 +312,8 @@ describe('Tell', function() {
       });
       return app.handle(null, {
         url: '/a'
+      }, {
+        res: true
       }).then(function(res) {
         eq(trace.length, 2);
         eq(trace[0], 1);
@@ -280,6 +334,8 @@ describe('Tell', function() {
       });
       return app.handle(null, {
         url: '/a/b'
+      }, {
+        res: true
       }).then(function(res) {
         eq(trace.length, 2);
         eq(trace[0], 1);
@@ -298,6 +354,8 @@ describe('Tell', function() {
       });
       return app.handle(null, {
         url: '/ab'
+      }, {
+        res: true
       }).then(function(res) {
         eq(trace.length, 1);
         return eq(trace[0], 3);
@@ -315,6 +373,8 @@ describe('Tell', function() {
       });
       return app.handle(null, {
         url: '/c'
+      }, {
+        res: true
       }).then(function(res) {
         eq(trace.length, 1);
         return eq(trace[0], 3);
@@ -333,6 +393,8 @@ describe('Tell', function() {
       return app.handle(null, {
         url: '/info',
         method: 'POST'
+      }, {
+        res: true
       }).then(function(res) {
         eq(trace.length, 1);
         return eq(trace[0], 2);
